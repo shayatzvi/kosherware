@@ -2,124 +2,109 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>LexGuard Certification System</title>
+    <title>LexGuard | Administration Portal</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        body { background-color: #f4f7f6; padding-top: 30px; }
-        .panel { border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .hidden { display: none; }
-        .cert-btn { margin-top: 10px; }
+        body { background: #f0f0f0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+        .navbar { background: #2c3e50; border-radius: 0; color: white; padding: 15px; }
+        .panel { border-radius: 0; border: 1px solid #ddd; }
+        .panel-heading { background: #f8f8f8 !important; font-weight: bold; }
+        .btn-action { margin-right: 5px; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div id="auth-section" class="panel panel-default" style="max-width: 400px; margin: auto;">
-        <div class="panel-heading"><h4>Login</h4></div>
-        <div class="panel-body">
-            <input type="email" id="email" class="form-control" placeholder="Email"><br>
-            <input type="password" id="password" class="form-control" placeholder="Password"><br>
-            <button class="btn btn-primary btn-block" onclick="login()">Access System</button>
-        </div>
-    </div>
+<div class="navbar"><h3>LexGuard Administration</h3></div>
 
-    <div id="app-section" class="hidden">
+<div class="container">
+    <!-- Main Dashboard -->
+    <div id="app-section">
         <div class="panel panel-default">
-            <div class="panel-heading">
-                <h3>LexGuard Dashboard <button class="btn btn-danger btn-xs pull-right" onclick="logout()">Logout</button></h3>
-            </div>
+            <div class="panel-heading">Manage Establishments</div>
             <div class="panel-body">
-                <table class="table table-hover">
+                <button class="btn btn-primary" onclick="openModal()">Add New</button>
+                <hr>
+                <table class="table table-striped table-bordered">
                     <thead><tr><th>Name</th><th>Location</th><th>Status</th><th>Type</th><th>Actions</th></tr></thead>
                     <tbody id="est-body"></tbody>
                 </table>
-                <button class="btn btn-success" data-toggle="modal" data-target="#addModal">Add New Establishment</button>
             </div>
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="addModal"><div class="modal-dialog"><div class="modal-content">
-    <div class="modal-header"><h4>Add Detailed Establishment</h4></div>
-    <div class="modal-body">
-        <input type="text" id="eName" class="form-control" placeholder="Establishment Name"><br>
-        <input type="text" id="eLoc" class="form-control" placeholder="Location"><br>
-        <input type="text" id="eStatus" class="form-control" placeholder="Status (e.g. Active)"><br>
-        <input type="text" id="eType" class="form-control" placeholder="Kosher Type"><br>
-        <input type="date" id="eDate" class="form-control">
+<!-- Modal -->
+<div class="modal fade" id="dataModal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h4 id="modalTitle">Add/Edit Record</h4></div>
+            <div class="modal-body">
+                <input type="hidden" id="eId">
+                <input type="text" id="eName" class="form-control" placeholder="Name"><br>
+                <input type="text" id="eLoc" class="form-control" placeholder="Location"><br>
+                <input type="text" id="eStatus" class="form-control" placeholder="Status"><br>
+                <input type="text" id="eType" class="form-control" placeholder="Type">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-default" data-dismiss="modal">Close</button>
+                <button class="btn btn-success" onclick="saveData()">Save Changes</button>
+            </div>
+        </div>
     </div>
-    <div class="modal-footer"><button class="btn btn-primary" onclick="saveData()">Save Record</button></div>
-</div></div></div>
+</div>
 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
 
 <script>
-    // Configuration
-    const firebaseConfig = {
-        apiKey: "AIzaSyAQ6srV8znv9VPXSJadwndd1r-borokbV0",
-        authDomain: "lexguard-4e97d.firebaseapp.com",
-        projectId: "lexguard-4e97d",
-        storageBucket: "lexguard-4e97d.firebasestorage.app",
-        messagingSenderId: "579400873495",
-        appId: "1:579400873495:web:56f48cb7c6bd5d37bc8e52"
-    };
-
+    const firebaseConfig = { /* USE YOUR CONFIG HERE */ };
     firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
     const db = firebase.firestore();
 
-    function login() { auth.signInWithEmailAndPassword($('#email').val(), $('#password').val()); }
-    function logout() { auth.signOut(); }
-
-    auth.onAuthStateChanged(user => {
-        if (user) {
-            $('#auth-section').addClass('hidden');
-            $('#app-section').removeClass('hidden');
-            loadData();
-        } else {
-            $('#auth-section').removeClass('hidden');
-            $('#app-section').addClass('hidden');
-        }
-    });
-
-    function saveData() {
-        db.collection('establishments').add({
-            name: $('#eName').val(),
-            location: $('#eLoc').val(),
-            status: $('#eStatus').val(),
-            type: $('#eType').val(),
-            date: $('#eDate').val()
-        }).then(() => $('#addModal').modal('hide'));
+    // Open Modal for Add/Edit
+    function openModal(id = '', name = '', loc = '', status = '', type = '') {
+        $('#eId').val(id); $('#eName').val(name); $('#eLoc').val(loc);
+        $('#eStatus').val(status); $('#eType').val(type);
+        $('#dataModal').modal('show');
     }
 
-    function downloadPDF(data) {
+    // Save/Update
+    function saveData() {
+        const id = $('#eId').val();
+        const data = { name: $('#eName').val(), location: $('#eLoc').val(), status: $('#eStatus').val(), type: $('#eType').val() };
+        if (id) { db.collection('establishments').doc(id).update(data); }
+        else { db.collection('establishments').add(data); }
+        $('#dataModal').modal('hide');
+    }
+
+    // Delete
+    function deleteEst(id) { if (confirm('Are you sure?')) db.collection('establishments').doc(id).delete(); }
+
+    // PDF Download
+    function downloadPDF(d) {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
-        doc.setFontSize(22);
         doc.text("Certificate of Kashrut", 105, 20, { align: "center" });
-        doc.setFontSize(16);
-        doc.text(`Entity: ${data.name}`, 20, 50);
-        doc.text(`Location: ${data.location}`, 20, 60);
-        doc.text(`Kosher Type: ${data.type}`, 20, 70);
-        doc.save(`${data.name}_Certificate.pdf`);
+        doc.text(`Entity: ${d.name}`, 20, 50);
+        doc.save(`${d.name}_Cert.pdf`);
     }
 
-    function loadData() {
-        db.collection('establishments').onSnapshot(snap => {
-            $('#est-body').empty();
-            snap.forEach(doc => {
-                const d = doc.data();
-                const row = `<tr><td>${d.name}</td><td>${d.location}</td><td>${d.status}</td><td>${d.type}</td>
-                    <td><button class="btn btn-xs btn-default" onclick='downloadPDF(${JSON.stringify(d)})'>Download PDF</button></td></tr>`;
-                $('#est-body').append(row);
-            });
+    // Render Data
+    db.collection('establishments').onSnapshot(snap => {
+        $('#est-body').empty();
+        snap.forEach(doc => {
+            const d = doc.data();
+            $('#est-body').append(`<tr><td>${d.name}</td><td>${d.location}</td><td>${d.status}</td><td>${d.type}</td>
+                <td>
+                    <button class="btn btn-xs btn-info" onclick="openModal('${doc.id}', '${d.name}', '${d.location}', '${d.status}', '${d.type}')">Edit</button>
+                    <button class="btn btn-xs btn-danger" onclick="deleteEst('${doc.id}')">Delete</button>
+                    <button class="btn btn-xs btn-default" onclick='downloadPDF(${JSON.stringify(d)})'>PDF</button>
+                </td></tr>`);
         });
-    }
+    });
 </script>
 </body>
 </html>
