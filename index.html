@@ -2,51 +2,56 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CertTracker - Secure</title>
+    <title>LexGuard Certification System</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        body { padding-top: 50px; background: #f0f0f0; }
-        .auth-container { max-width: 400px; margin: auto; padding: 20px; background: white; }
+        body { background-color: #f4f7f6; padding-top: 30px; }
+        .panel { border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .hidden { display: none; }
-        @media print { .no-print { display: none; } }
+        .cert-btn { margin-top: 10px; }
     </style>
 </head>
 <body>
 
-<!-- Auth Section -->
-<div id="auth-section" class="container auth-container">
-    <h3>Login</h3>
-    <input type="email" id="email" class="form-control" placeholder="Email"><br>
-    <input type="password" id="password" class="form-control" placeholder="Password"><br>
-    <button class="btn btn-primary btn-block" onclick="login()">Login</button>
-</div>
-
-<!-- App Section -->
-<div id="app-section" class="container hidden">
-    <h2>Certification Manager <button class="btn btn-danger btn-xs" onclick="logout()">Logout</button></h2>
-    <ul class="nav nav-tabs">
-        <li class="active"><a data-toggle="tab" href="#est">Establishments</a></li>
-        <li><a data-toggle="tab" href="#prod">Products</a></li>
-    </ul>
-    <div class="tab-content">
-        <div id="est" class="tab-pane fade in active">
-            <br><button class="btn btn-success" data-toggle="modal" data-target="#estModal">Add Establishment</button>
-            <table class="table"><thead><tr><th>Name</th><th>Location</th><th>Actions</th></tr></thead><tbody id="est-body"></tbody></table>
+<div class="container">
+    <div id="auth-section" class="panel panel-default" style="max-width: 400px; margin: auto;">
+        <div class="panel-heading"><h4>Login</h4></div>
+        <div class="panel-body">
+            <input type="email" id="email" class="form-control" placeholder="Email"><br>
+            <input type="password" id="password" class="form-control" placeholder="Password"><br>
+            <button class="btn btn-primary btn-block" onclick="login()">Access System</button>
         </div>
-        <div id="prod" class="tab-pane fade">
-            <br><button class="btn btn-success" data-toggle="modal" data-target="#prodModal">Add Product</button>
-            <table class="table"><thead><tr><th>Product</th><th>Status</th><th>Actions</th></tr></thead><tbody id="prod-body"></tbody></table>
+    </div>
+
+    <div id="app-section" class="hidden">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h3>LexGuard Dashboard <button class="btn btn-danger btn-xs pull-right" onclick="logout()">Logout</button></h3>
+            </div>
+            <div class="panel-body">
+                <table class="table table-hover">
+                    <thead><tr><th>Name</th><th>Location</th><th>Status</th><th>Type</th><th>Actions</th></tr></thead>
+                    <tbody id="est-body"></tbody>
+                </table>
+                <button class="btn btn-success" data-toggle="modal" data-target="#addModal">Add New Establishment</button>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- Modals -->
-<div class="modal fade" id="estModal"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h4>Add Establishment</h4></div><div class="modal-body">
-    <input type="text" id="eName" class="form-control" placeholder="Name"><br>
-    <input type="text" id="eLoc" class="form-control" placeholder="Location">
-</div><div class="modal-footer"><button class="btn btn-primary" onclick="saveEst()">Save</button></div></div></div></div>
+<div class="modal fade" id="addModal"><div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h4>Add Detailed Establishment</h4></div>
+    <div class="modal-body">
+        <input type="text" id="eName" class="form-control" placeholder="Establishment Name"><br>
+        <input type="text" id="eLoc" class="form-control" placeholder="Location"><br>
+        <input type="text" id="eStatus" class="form-control" placeholder="Status (e.g. Active)"><br>
+        <input type="text" id="eType" class="form-control" placeholder="Kosher Type"><br>
+        <input type="date" id="eDate" class="form-control">
+    </div>
+    <div class="modal-footer"><button class="btn btn-primary" onclick="saveData()">Save Record</button></div>
+</div></div></div>
 
-<!-- Scripts -->
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
@@ -54,6 +59,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
 
 <script>
+    // Configuration
     const firebaseConfig = {
         apiKey: "AIzaSyAQ6srV8znv9VPXSJadwndd1r-borokbV0",
         authDomain: "lexguard-4e97d.firebaseapp.com",
@@ -67,10 +73,8 @@
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    function login() {
-        auth.signInWithEmailAndPassword($('#email').val(), $('#password').val())
-            .catch(err => alert(err.message));
-    }
+    function login() { auth.signInWithEmailAndPassword($('#email').val(), $('#password').val()); }
+    function logout() { auth.signOut(); }
 
     auth.onAuthStateChanged(user => {
         if (user) {
@@ -83,11 +87,26 @@
         }
     });
 
-    function saveEst() {
+    function saveData() {
         db.collection('establishments').add({
             name: $('#eName').val(),
-            location: $('#eLoc').val()
-        }).then(() => $('#estModal').modal('hide'));
+            location: $('#eLoc').val(),
+            status: $('#eStatus').val(),
+            type: $('#eType').val(),
+            date: $('#eDate').val()
+        }).then(() => $('#addModal').modal('hide'));
+    }
+
+    function downloadPDF(data) {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.setFontSize(22);
+        doc.text("Certificate of Kashrut", 105, 20, { align: "center" });
+        doc.setFontSize(16);
+        doc.text(`Entity: ${data.name}`, 20, 50);
+        doc.text(`Location: ${data.location}`, 20, 60);
+        doc.text(`Kosher Type: ${data.type}`, 20, 70);
+        doc.save(`${data.name}_Certificate.pdf`);
     }
 
     function loadData() {
@@ -95,12 +114,12 @@
             $('#est-body').empty();
             snap.forEach(doc => {
                 const d = doc.data();
-                $('#est-body').append(`<tr><td>${d.name}</td><td>${d.location}</td><td><button class="btn btn-xs btn-info" onclick="window.print()">Print</button></td></tr>`);
+                const row = `<tr><td>${d.name}</td><td>${d.location}</td><td>${d.status}</td><td>${d.type}</td>
+                    <td><button class="btn btn-xs btn-default" onclick='downloadPDF(${JSON.stringify(d)})'>Download PDF</button></td></tr>`;
+                $('#est-body').append(row);
             });
         });
     }
-
-    function logout() { auth.signOut(); }
 </script>
 </body>
 </html>
