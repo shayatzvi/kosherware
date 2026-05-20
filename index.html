@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CertTracker - Bootstrap 3</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <style>
+        body { padding-top: 20px; }
+        @media print { .no-print { display: none; } .certificate { display: block; } }
+        .certificate { display: none; padding: 50px; border: 5px double #333; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Certification Manager</h2>
+    <ul class="nav nav-tabs no-print">
+        <li class="active"><a data-toggle="tab" href="#establishments">Establishments</a></li>
+        <li><a data-toggle="tab" href="#products">Products</a></li>
+    </ul>
+
+    <div class="tab-content">
+        <!-- Establishments Tab -->
+        <div id="establishments" class="tab-pane fade in active">
+            <h3>Manage Establishments</h3>
+            <button class="btn btn-primary no-print" onclick="openModal('establishments')">Add Establishment</button>
+            <table class="table table-striped">
+                <thead><tr><th>Name</th><th>Location</th><th>Status</th><th>Type</th><th>Actions</th></tr></thead>
+                <tbody id="est-table-body"></tbody>
+            </table>
+        </div>
+
+        <!-- Products Tab -->
+        <div id="products" class="tab-pane fade">
+            <h3>Manage Products</h3>
+            <button class="btn btn-primary no-print" onclick="openModal('products')">Add Product</button>
+            <table class="table table-striped">
+                <thead><tr><th>Product Name</th><th>Status</th><th>Actions</th></tr></thead>
+                <tbody id="prod-table-body"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Firebase & App Script -->
+<script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+<script>
+    // --- PASTE YOUR FIREBASE CONFIG HERE ---
+    const firebaseConfig = {
+        Key: "AIzaSyAQ6srV8znv9VPXSJadwndd1r-borokbV0",
+  authDomain: "lexguard-4e97d.firebaseapp.com",
+  projectId: "lexguard-4e97d",
+  storageBucket: "lexguard-4e97d.firebasestorage.app",
+  messagingSenderId: "579400873495",
+  appId: "1:579400873495:web:56f48cb7c6bd5d37bc8e52"
+        
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // CRUD Logic (Simplified for brevity)
+    function renderTable(collection, containerId) {
+        db.collection(collection).onSnapshot(snapshot => {
+            const tbody = document.getElementById(containerId);
+            tbody.innerHTML = "";
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                const row = `<tr>
+                    <td>${data.name || data.productName}</td>
+                    <td>${data.location || '-'}</td>
+                    <td>${data.status}</td>
+                    <td>${data.kosherType || '-'}</td>
+                    <td>
+                        <button class="btn btn-xs btn-default" onclick="printCert('${data.name || data.productName}')">Print Cert</button>
+                    </td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+        });
+    }
+
+    function printCert(name) {
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`<html><body><div class="certificate">
+            <h1>Certificate of Kashrut</h1>
+            <p>This certifies that <strong>${name}</strong> is in good standing.</p>
+        </div></body></html>`);
+        printWindow.print();
+    }
+
+    renderTable('establishments', 'est-table-body');
+    renderTable('products', 'prod-table-body');
+</script>
+</body>
+</html>
