@@ -2,67 +2,56 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CertTracker - Bootstrap 3</title>
+    <title>CertTracker - Secure</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
     <style>
-        body { padding-top: 20px; background: #f9f9f9; }
-        .certificate { display: none; padding: 40px; border: 5px double #333; max-width: 600px; margin: auto; }
-        @media print { .no-print { display: none !important; } .certificate { display: block; } }
+        body { padding-top: 50px; background: #f0f0f0; }
+        .auth-container { max-width: 400px; margin: auto; padding: 20px; background: white; }
+        .hidden { display: none; }
+        @media print { .no-print { display: none; } }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="panel panel-default">
-        <div class="panel-heading"><h3>Certification Manager</h3></div>
-        <div class="panel-body">
-            <ul class="nav nav-tabs no-print">
-                <li class="active"><a data-toggle="tab" href="#estTab">Establishments</a></li>
-                <li><a data-toggle="tab" href="#prodTab">Products</a></li>
-            </ul>
+<!-- Auth Section -->
+<div id="auth-section" class="container auth-container">
+    <h3>Login</h3>
+    <input type="email" id="email" class="form-control" placeholder="Email"><br>
+    <input type="password" id="password" class="form-control" placeholder="Password"><br>
+    <button class="btn btn-primary btn-block" onclick="login()">Login</button>
+</div>
 
-            <div class="tab-content">
-                <!-- Establishments Section -->
-                <div id="estTab" class="tab-pane fade in active">
-                    <br>
-                    <form id="estForm" class="form-inline">
-                        <input type="text" id="eName" class="form-control" placeholder="Name" required>
-                        <input type="text" id="eLoc" class="form-control" placeholder="Location">
-                        <input type="text" id="eStatus" class="form-control" placeholder="Status">
-                        <input type="text" id="eType" class="form-control" placeholder="Kosher Type">
-                        <button type="submit" class="btn btn-success">Add</button>
-                    </form>
-                    <br>
-                    <table class="table table-bordered">
-                        <thead><tr><th>Name</th><th>Location</th><th>Status</th><th>Type</th><th>Actions</th></tr></thead>
-                        <tbody id="est-body"></tbody>
-                    </table>
-                </div>
-
-                <!-- Products Section -->
-                <div id="prodTab" class="tab-pane fade">
-                    <br>
-                    <form id="prodForm" class="form-inline">
-                        <input type="text" id="pName" class="form-control" placeholder="Product Name" required>
-                        <input type="text" id="pStatus" class="form-control" placeholder="Status">
-                        <button type="submit" class="btn btn-success">Add</button>
-                    </form>
-                    <br>
-                    <table class="table table-bordered">
-                        <thead><tr><th>Product Name</th><th>Status</th><th>Actions</th></tr></thead>
-                        <tbody id="prod-body"></tbody>
-                    </table>
-                </div>
-            </div>
+<!-- App Section -->
+<div id="app-section" class="container hidden">
+    <h2>Certification Manager <button class="btn btn-danger btn-xs" onclick="logout()">Logout</button></h2>
+    <ul class="nav nav-tabs">
+        <li class="active"><a data-toggle="tab" href="#est">Establishments</a></li>
+        <li><a data-toggle="tab" href="#prod">Products</a></li>
+    </ul>
+    <div class="tab-content">
+        <div id="est" class="tab-pane fade in active">
+            <br><button class="btn btn-success" data-toggle="modal" data-target="#estModal">Add Establishment</button>
+            <table class="table"><thead><tr><th>Name</th><th>Location</th><th>Actions</th></tr></thead><tbody id="est-body"></tbody></table>
+        </div>
+        <div id="prod" class="tab-pane fade">
+            <br><button class="btn btn-success" data-toggle="modal" data-target="#prodModal">Add Product</button>
+            <table class="table"><thead><tr><th>Product</th><th>Status</th><th>Actions</th></tr></thead><tbody id="prod-body"></tbody></table>
         </div>
     </div>
 </div>
 
-<!-- Firebase Scripts -->
-<script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+<!-- Modals -->
+<div class="modal fade" id="estModal"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h4>Add Establishment</h4></div><div class="modal-body">
+    <input type="text" id="eName" class="form-control" placeholder="Name"><br>
+    <input type="text" id="eLoc" class="form-control" placeholder="Location">
+</div><div class="modal-footer"><button class="btn btn-primary" onclick="saveEst()">Save</button></div></div></div></div>
+
+<!-- Scripts -->
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
 
 <script>
     const firebaseConfig = {
@@ -75,52 +64,43 @@
     };
 
     firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
     const db = firebase.firestore();
 
-    // Add Data
-    $('#estForm').submit(function(e) {
-        e.preventDefault();
+    function login() {
+        auth.signInWithEmailAndPassword($('#email').val(), $('#password').val())
+            .catch(err => alert(err.message));
+    }
+
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            $('#auth-section').addClass('hidden');
+            $('#app-section').removeClass('hidden');
+            loadData();
+        } else {
+            $('#auth-section').removeClass('hidden');
+            $('#app-section').addClass('hidden');
+        }
+    });
+
+    function saveEst() {
         db.collection('establishments').add({
             name: $('#eName').val(),
-            location: $('#eLoc').val(),
-            status: $('#eStatus').val(),
-            kosherType: $('#eType').val()
-        });
-        this.reset();
-    });
+            location: $('#eLoc').val()
+        }).then(() => $('#estModal').modal('hide'));
+    }
 
-    $('#prodForm').submit(function(e) {
-        e.preventDefault();
-        db.collection('products').add({
-            productName: $('#pName').val(),
-            status: $('#pStatus').val()
-        });
-        this.reset();
-    });
-
-    // Render Tables
-    function loadData(col, bodyId, isEst) {
-        db.collection(col).onSnapshot(snapshot => {
-            $(bodyId).empty();
-            snapshot.forEach(doc => {
+    function loadData() {
+        db.collection('establishments').onSnapshot(snap => {
+            $('#est-body').empty();
+            snap.forEach(doc => {
                 const d = doc.data();
-                const html = isEst ? 
-                    `<tr><td>${d.name}</td><td>${d.location}</td><td>${d.status}</td><td>${d.kosherType}</td><td><button class="btn btn-xs btn-info" onclick="printCert('${d.name}')">Print</button></td></tr>` :
-                    `<tr><td>${d.productName}</td><td>${d.status}</td><td><button class="btn btn-xs btn-info" onclick="printCert('${d.productName}')">Print</button></td></tr>`;
-                $(bodyId).append(html);
+                $('#est-body').append(`<tr><td>${d.name}</td><td>${d.location}</td><td><button class="btn btn-xs btn-info" onclick="window.print()">Print</button></td></tr>`);
             });
         });
     }
 
-    function printCert(name) {
-        const w = window.open();
-        w.document.write(`<div class="certificate"><h2>Certificate of Kashrut</h2><p>Certified for: <strong>${name}</strong></p></div>`);
-        w.print();
-        w.close();
-    }
-
-    loadData('establishments', '#est-body', true);
-    loadData('products', '#prod-body', false);
+    function logout() { auth.signOut(); }
 </script>
 </body>
 </html>
