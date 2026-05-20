@@ -2,109 +2,72 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>LexGuard | Administration Portal</title>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <title>LexGuard | Data Portal</title>
     <style>
-        body { background: #f0f0f0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
-        .navbar { background: #2c3e50; border-radius: 0; color: white; padding: 15px; }
-        .panel { border-radius: 0; border: 1px solid #ddd; }
-        .panel-heading { background: #f8f8f8 !important; font-weight: bold; }
-        .btn-action { margin-right: 5px; }
+        /* KVH Aesthetic */
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f4f7f9; margin: 0; color: #333; }
+        .header { background-color: #2c4273; color: white; padding: 20px; font-weight: bold; font-size: 1.5em; }
+        .container { max-width: 900px; margin: 20px auto; background: white; border: 1px solid #dcdcdc; padding: 20px; }
+        
+        /* Tabs */
+        .tabs { display: flex; border-bottom: 2px solid #dcdcdc; margin-bottom: 20px; }
+        .tab { padding: 10px 20px; cursor: pointer; color: #555; }
+        .tab.active { border-bottom: 3px solid #2c4273; color: #2c4273; font-weight: bold; }
+
+        /* Forms */
+        .form-group { display: flex; gap: 20px; margin-bottom: 15px; }
+        .field { flex: 1; }
+        label { display: block; font-size: 0.8em; color: #666; margin-bottom: 5px; }
+        input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        
+        .action-bar { margin-top: 20px; text-align: right; }
+        button { padding: 10px 20px; cursor: pointer; border: none; border-radius: 4px; }
+        .btn-save { background: #2c4273; color: white; }
     </style>
 </head>
 <body>
 
-<div class="navbar"><h3>LexGuard Administration</h3></div>
+<div class="header">KVHWEB | YOUR KOSHER DATA PORTAL</div>
 
 <div class="container">
-    <!-- Main Dashboard -->
-    <div id="app-section">
-        <div class="panel panel-default">
-            <div class="panel-heading">Manage Establishments</div>
-            <div class="panel-body">
-                <button class="btn btn-primary" onclick="openModal()">Add New</button>
-                <hr>
-                <table class="table table-striped table-bordered">
-                    <thead><tr><th>Name</th><th>Location</th><th>Status</th><th>Type</th><th>Actions</th></tr></thead>
-                    <tbody id="est-body"></tbody>
-                </table>
-            </div>
+    <div class="tabs">
+        <div class="tab active">Contact Info</div>
+        <div class="tab">Availability</div>
+        <div class="tab">Background</div>
+    </div>
+
+    <div id="form-area">
+        <div class="form-group">
+            <div class="field"><label>Salutation</label><input type="text" id="salutation"></div>
+        </div>
+        <div class="form-group">
+            <div class="field"><label>First Name</label><input type="text" id="fName"></div>
+            <div class="field"><label>Last Name</label><input type="text" id="lName"></div>
+        </div>
+        <div class="form-group">
+            <div class="field"><label>Phone</label><input type="text" id="phone"></div>
+            <div class="field"><label>Mobile</label><input type="text" id="mobile"></div>
+        </div>
+        <div class="action-bar">
+            <button class="btn-save" onclick="saveData()">Save Information</button>
         </div>
     </div>
 </div>
 
-<!-- Modal -->
-<div class="modal fade" id="dataModal">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header"><h4 id="modalTitle">Add/Edit Record</h4></div>
-            <div class="modal-body">
-                <input type="hidden" id="eId">
-                <input type="text" id="eName" class="form-control" placeholder="Name"><br>
-                <input type="text" id="eLoc" class="form-control" placeholder="Location"><br>
-                <input type="text" id="eStatus" class="form-control" placeholder="Status"><br>
-                <input type="text" id="eType" class="form-control" placeholder="Type">
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-default" data-dismiss="modal">Close</button>
-                <button class="btn btn-success" onclick="saveData()">Save Changes</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
-
 <script>
-    const firebaseConfig = { /* USE YOUR CONFIG HERE */ };
+    const firebaseConfig = { /* PASTE YOUR CONFIG HERE */ };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // Open Modal for Add/Edit
-    function openModal(id = '', name = '', loc = '', status = '', type = '') {
-        $('#eId').val(id); $('#eName').val(name); $('#eLoc').val(loc);
-        $('#eStatus').val(status); $('#eType').val(type);
-        $('#dataModal').modal('show');
-    }
-
-    // Save/Update
     function saveData() {
-        const id = $('#eId').val();
-        const data = { name: $('#eName').val(), location: $('#eLoc').val(), status: $('#eStatus').val(), type: $('#eType').val() };
-        if (id) { db.collection('establishments').doc(id).update(data); }
-        else { db.collection('establishments').add(data); }
-        $('#dataModal').modal('hide');
+        db.collection('profiles').add({
+            salutation: document.getElementById('salutation').value,
+            firstName: document.getElementById('fName').value,
+            lastName: document.getElementById('lName').value
+        }).then(() => alert('Saved!'));
     }
-
-    // Delete
-    function deleteEst(id) { if (confirm('Are you sure?')) db.collection('establishments').doc(id).delete(); }
-
-    // PDF Download
-    function downloadPDF(d) {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        doc.text("Certificate of Kashrut", 105, 20, { align: "center" });
-        doc.text(`Entity: ${d.name}`, 20, 50);
-        doc.save(`${d.name}_Cert.pdf`);
-    }
-
-    // Render Data
-    db.collection('establishments').onSnapshot(snap => {
-        $('#est-body').empty();
-        snap.forEach(doc => {
-            const d = doc.data();
-            $('#est-body').append(`<tr><td>${d.name}</td><td>${d.location}</td><td>${d.status}</td><td>${d.type}</td>
-                <td>
-                    <button class="btn btn-xs btn-info" onclick="openModal('${doc.id}', '${d.name}', '${d.location}', '${d.status}', '${d.type}')">Edit</button>
-                    <button class="btn btn-xs btn-danger" onclick="deleteEst('${doc.id}')">Delete</button>
-                    <button class="btn btn-xs btn-default" onclick='downloadPDF(${JSON.stringify(d)})'>PDF</button>
-                </td></tr>`);
-        });
-    });
 </script>
 </body>
 </html>
